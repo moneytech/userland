@@ -802,6 +802,7 @@ static MMAL_STATUS_T mmal_vc_component_destroy(MMAL_COMPONENT_T *component)
 fail:
    // no longer require videocore
    mmal_vc_release();
+   mmal_vc_shm_exit();
    mmal_vc_deinit();
    return status;
 }
@@ -1114,7 +1115,7 @@ static MMAL_STATUS_T mmal_vc_port_parameter_set(MMAL_PORT_T *port, const MMAL_PA
 
    if(param->size > MMAL_WORKER_PORT_PARAMETER_SET_MAX)
    {
-      LOG_ERROR("parameter too large (%u > %u)", param->size, MMAL_WORKER_PORT_PARAMETER_SET_MAX);
+      LOG_ERROR("parameter too large (%u > %zu)", param->size, MMAL_WORKER_PORT_PARAMETER_SET_MAX);
       return MMAL_ENOSPC;
    }
 
@@ -1173,7 +1174,7 @@ static MMAL_STATUS_T mmal_vc_port_parameter_get(MMAL_PORT_T *port, MMAL_PARAMETE
 
    if(param->size > MMAL_WORKER_PORT_PARAMETER_GET_MAX)
    {
-      LOG_ERROR("parameter too large (%u > %u) id %u", param->size,
+      LOG_ERROR("parameter too large (%u > %zu) id %u", param->size,
             MMAL_WORKER_PORT_PARAMETER_GET_MAX, param->id);
       return MMAL_ENOMEM;
    }
@@ -1244,7 +1245,7 @@ static uint8_t *mmal_vc_port_payload_alloc(MMAL_PORT_T *port, uint32_t payload_s
    {
       MMAL_OPAQUE_IMAGE_HANDLE_T h = mmal_vc_opaque_alloc_desc(port->name);
       can_deref = MMAL_FALSE;
-      ret = (void*)h;
+      ret = (void*)(uintptr_t)h;
       if (!ret)
       {
          LOG_ERROR("%s: failed to allocate %d bytes opaque memory",
@@ -1268,7 +1269,7 @@ static uint8_t *mmal_vc_port_payload_alloc(MMAL_PORT_T *port, uint32_t payload_s
    else
    {
       /* Allocate conventional memory */
-      ret = vcos_malloc(payload_size, "mmal_vc_port payload");
+      ret = vcos_calloc(1, payload_size, "mmal_vc_port payload");
       if (!ret)
       {
          LOG_ERROR("could not allocate %i bytes", (int)payload_size);
@@ -1293,7 +1294,7 @@ static void mmal_vc_port_payload_free(MMAL_PORT_T *port, uint8_t *payload)
    if (module->opaque_allocs)
    {
       module->opaque_allocs--;
-      mmal_vc_opaque_release((MMAL_OPAQUE_IMAGE_HANDLE_T)payload);
+      mmal_vc_opaque_release((MMAL_OPAQUE_IMAGE_HANDLE_T)(uintptr_t)payload);
       return;
    }
 
@@ -1341,6 +1342,15 @@ static MMAL_STATUS_T mmal_vc_component_create(const char *name, MMAL_COMPONENT_T
                 name, status, mmal_status_to_string(status));
       return status;
    }
+   status = mmal_vc_shm_init();
+   if (status != MMAL_SUCCESS)
+   {
+      LOG_ERROR("failed to initialise shm for '%s' (%i:%s)",
+                name, status, mmal_status_to_string(status));
+      mmal_vc_deinit();
+      return status;
+   }
+
    // claim VC for entire duration of component.
    status = mmal_vc_use();
 
@@ -1361,6 +1371,7 @@ static MMAL_STATUS_T mmal_vc_component_create(const char *name, MMAL_COMPONENT_T
       LOG_ERROR("failed to create component '%s' (%i:%s)", name, status,
                 mmal_status_to_string(status));
       mmal_vc_release();
+      mmal_vc_shm_exit();
       mmal_vc_deinit();
       return status;
    }
@@ -1380,6 +1391,7 @@ static MMAL_STATUS_T mmal_vc_component_create(const char *name, MMAL_COMPONENT_T
                                MMAL_WORKER_COMPONENT_DESTROY, &reply, &replylen, MMAL_FALSE);
       vcos_assert(destroy_status == MMAL_SUCCESS);
       mmal_vc_release();
+      mmal_vc_shm_exit();
       mmal_vc_deinit();
       return status;
    }
@@ -1499,7 +1511,6 @@ fail:
 MMAL_CONSTRUCTOR(mmal_register_component_videocore);
 void mmal_register_component_videocore(void)
 {
-   mmal_vc_shm_init();
    mmal_component_supplier_register(VIDEOCORE_PREFIX, mmal_vc_component_create);
 }
 

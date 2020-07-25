@@ -447,7 +447,7 @@ void vcos_thread_attr_setautostart(VCOS_THREAD_ATTR_T *attrs, VCOS_UNSIGNED auto
 
 VCOS_INLINE_IMPL
 VCOS_LLTHREAD_T *vcos_llthread_current(void) {
-   return (VCOS_LLTHREAD_T *)pthread_self();
+   return (VCOS_LLTHREAD_T *)(uintptr_t)pthread_self();
 }
 
 VCOS_INLINE_IMPL
@@ -765,17 +765,6 @@ VCOS_INLINE_IMPL
 void vcos_atomic_flags_delete(VCOS_ATOMIC_FLAGS_T *atomic_flags)
 {
    vcos_mutex_delete(&atomic_flags->mutex);
-}
-
-#endif
-
-#if defined(linux) || defined(_HAVE_SBRK)
-
-/* Returns invalid result, do not use */
-
-VCOS_INLINE_IMPL
-unsigned long VCOS_DEPRECATED("returns invalid result") vcos_get_free_mem(void) {
-   return 0;
 }
 
 #endif

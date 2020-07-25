@@ -1,14 +1,29 @@
-/*=============================================================================
-Copyright (c) 2006 Broadcom Europe Limited.
-Copyright (c) 2005 Alphamosaic Limited.
+/*
+Copyright (c) 2012, Broadcom Europe Ltd
 All rights reserved.
 
-Project  :  VideoCore
-Module   :  VideoCore specific header (vc_image_types)
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the copyright holder nor the
+      names of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written permission.
 
-FILE DESCRIPTION
-Common image types used by the vc_image library.
-=============================================================================*/
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #ifndef INTERFACE_VC_IMAGE_STRUCTS_H
 #define INTERFACE_VC_IMAGE_STRUCTS_H
@@ -39,19 +54,25 @@ Common image types used by the vc_image library.
       VC_IMAGE_YUVINFO_CSC_ITUR_BT470_2_M  = 6,  /* ITU-R BT.470-2 System M */
       VC_IMAGE_YUVINFO_CSC_ITUR_BT470_2_BG = 7,  /* ITU-R BT.470-2 System B,G */
       VC_IMAGE_YUVINFO_CSC_JPEG_JFIF_Y16_255 = 8, /* JPEG JFIF, but with 16..255 luma */
+      VC_IMAGE_YUVINFO_CSC_REC_2020        = 9,   /* Rec 2020 */
       VC_IMAGE_YUVINFO_CSC_CUSTOM          = 15,  /* Custom colour matrix follows header */
       VC_IMAGE_YUVINFO_CSC_SMPTE_170M      = VC_IMAGE_YUVINFO_CSC_ITUR_BT601,
 
       /* co-sited flags, assumed interstitial if not co-sited [2 bits] */
-      VC_IMAGE_YUVINFO_H_COSITED      = 256,
-      VC_IMAGE_YUVINFO_V_COSITED      = 512,
+      VC_IMAGE_YUVINFO_H_COSITED      = 1<<8,
+      VC_IMAGE_YUVINFO_V_COSITED      = 1<<9,
 
-      VC_IMAGE_YUVINFO_TOP_BOTTOM     = 1024,
-      VC_IMAGE_YUVINFO_DECIMATED      = 2048,
-      VC_IMAGE_YUVINFO_PACKED         = 4096,
+      VC_IMAGE_YUVINFO_TOP_BOTTOM     = 1<<10,
+      VC_IMAGE_YUVINFO_DECIMATED      = 1<<11,
+      VC_IMAGE_YUVINFO_PACKED         = 1<<12,
+
+      /* For YUVUV enforce use the tall mode to keep the column stride below 64k */
+      VC_IMAGE_YUVINFO_TALL_YUVUV     = 1<<13,
+      /* For YUVUV pad the offset for the chroma planes to a 4k page (otherwise use vpitch) */
+      VC_IMAGE_YUVINFO_YUVUV_4K_CHROMA_ALIGN = 1<<14,
 
       /* Certain YUV image formats can either be V/U interleaved or U/V interleaved */
-      VC_IMAGE_YUVINFO_IS_VU          = 0x8000,
+      VC_IMAGE_YUVINFO_IS_VU          = 1<<15,
 
       /* Force Metaware to use 16 bits */
       VC_IMAGE_YUVINFO_FORCE_ENUM_16BIT = 0xffff,
@@ -62,6 +83,16 @@ Common image types used by the vc_image library.
 
 #define VC_IMAGE_YUV_UV32_STRIPE_WIDTH_LOG2 5
 #define VC_IMAGE_YUV_UV32_STRIPE_WIDTH (1 << VC_IMAGE_YUV_UV32_STRIPE_WIDTH_LOG2)
+
+/* 64 pixel wide stripes, 128 byte wide as 16bits/component */
+#define VC_IMAGE_YUV_UV_16_STRIPE_WIDTH_LOG2 6
+#define VC_IMAGE_YUV_UV_16_STRIPE_WIDTH (1 << VC_IMAGE_YUV_UV_16_STRIPE_WIDTH_LOG2)
+#define VC_IMAGE_YUV_UV_16_STRIPE_STRIDE_LOG2 7
+#define VC_IMAGE_YUV_UV_16_STRIPE_STRIDE (1 << VC_IMAGE_YUV_UV_16_STRIPE_STRIDE_LOG2)
+
+#define VC_IMAGE_YUV10COL_STRIPE_WIDTH_PIXELS 96
+#define VC_IMAGE_YUV10COL_STRIPE_WIDTH_BYTES_LOG2 7
+#define VC_IMAGE_YUV10COL_STRIPE_WIDTH_BYTES (1 << VC_IMAGE_YUV10COL_STRIPE_WIDTH_BYTES_LOG2)
 
    /* The image structure. */
    typedef struct vc_image_extra_uv_s {
@@ -75,6 +106,7 @@ Common image types used by the vc_image library.
                transparent_colour: 1,
                unused_26_31      : 6;
       unsigned int arg;
+      int vpitch;
    } VC_IMAGE_EXTRA_RGBA_T;
 
    typedef struct vc_image_extra_pal_s {
@@ -94,6 +126,7 @@ unsigned int cube_map           : 1;
       unsigned short order;
       unsigned short format;
       int block_length;
+      unsigned short vpitch;
    } VC_IMAGE_EXTRA_BAYER_T;
 
 //The next block can be used with Visual C++

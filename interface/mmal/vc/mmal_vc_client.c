@@ -344,7 +344,8 @@ static VCHIQ_STATUS_T mmal_vc_vchiq_callback(VCHIQ_REASON_T reason,
                LOG_TRACE("buffer too small (%i, %i)",
                          msg->buffer_header.offset + msg->buffer_header.length,
                          msg->drvbuf.client_context->buffer->alloc_size);
-               msg->buffer_header.length = 0; /* FIXME: set a buffer flag to signal error */
+               msg->buffer_header.length = 0;
+               msg->buffer_header.flags |= MMAL_BUFFER_HEADER_FLAG_TRANSMISSION_FAILED;
                msg->drvbuf.client_context->callback(msg);
                vchiq_release_message(service, vchiq_header);
                break;
@@ -375,7 +376,8 @@ static VCHIQ_STATUS_T mmal_vc_vchiq_callback(VCHIQ_REASON_T reason,
                   if (vst != VCHIQ_SUCCESS)
                   {
                      LOG_TRACE("queue bulk rx len %d failed to start", msg->buffer_header.length);
-                     msg->buffer_header.length = 0; /* FIXME: set a buffer flag to signal error */
+                     msg->buffer_header.length = 0;
+                     msg->buffer_header.flags |= MMAL_BUFFER_HEADER_FLAG_TRANSMISSION_FAILED;
                      msg->drvbuf.client_context->callback(msg);
                      vchiq_release_message(service, vchiq_header);
                   }
@@ -626,7 +628,7 @@ MMAL_STATUS_T mmal_vc_send_message(MMAL_CLIENT_T *client,
    VCHIQ_ELEMENT_T elems[] = {{msg_header, size}};
    MMAL_BOOL_T using_bulk_transfer = (data_size != 0);
 
-   LOG_TRACE("len %d", data_size);
+   LOG_TRACE("len %zu", data_size);
    vcos_assert(size >= sizeof(mmal_worker_msg_header));
 
    if (!client->inited)
@@ -654,7 +656,7 @@ MMAL_STATUS_T mmal_vc_send_message(MMAL_CLIENT_T *client,
 
    if (using_bulk_transfer)
    {
-      LOG_TRACE("bulk transmit: %p, %i", data, data_size);
+      LOG_TRACE("bulk transmit: %p, %zu", data, data_size);
 
       data_size = (data_size + 3) & ~3;
       vst = vchiq_queue_bulk_transmit(client->service, data, data_size, msg_header);

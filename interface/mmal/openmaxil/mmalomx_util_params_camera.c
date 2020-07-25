@@ -40,6 +40,7 @@ static const MMALOMX_PARAM_ENUM_TRANSLATE_T mmalomx_param_enum_awb_mode[] = {
    {MMAL_PARAM_AWBMODE_INCANDESCENT,OMX_WhiteBalControlIncandescent},
    {MMAL_PARAM_AWBMODE_FLASH,       OMX_WhiteBalControlFlash},
    {MMAL_PARAM_AWBMODE_HORIZON,     OMX_WhiteBalControlHorizon},
+   {MMAL_PARAM_AWBMODE_GREYWORLD,   OMX_WhiteBalControlGreyWorld},
 };
 
 static const MMALOMX_PARAM_ENUM_TRANSLATE_T mmalomx_param_enum_image_effect[] = {
@@ -395,12 +396,12 @@ static MMAL_STATUS_T mmalomx_param_mapping_fps_range(MMALOMX_PARAM_MAPPING_DIREC
    if (dir == MMALOMX_PARAM_MAPPING_TO_MMAL)
    {
       mmal->fps_low = mmal_rational_from_fixed_16_16(omx->xFramerateLow);
-      mmal->fps_high = mmal_rational_from_fixed_16_16(omx->xFramerateLow);
+      mmal->fps_high = mmal_rational_from_fixed_16_16(omx->xFramerateHigh);
    }
    else
    {
       omx->xFramerateLow = mmal_rational_to_fixed_16_16(mmal->fps_low);
-      omx->xFramerateLow = mmal_rational_to_fixed_16_16(mmal->fps_high);
+      omx->xFramerateHigh = mmal_rational_to_fixed_16_16(mmal->fps_high);
    }
 
    return MMAL_SUCCESS;

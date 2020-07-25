@@ -146,6 +146,15 @@ typedef enum
 
 } VCSM_CACHE_TYPE_T;
 
+/* Initialize the vcsm processing with option to use vc-sm-cma which supports
+** dmabuf export, and passing in an external fd to /dev/vcsm-cma or /dev/vcsm.
+**
+** Must be called once before attempting to do anything else.
+**
+** Returns 0 on success, -1 on error.
+*/
+int vcsm_init_ex( int want_export, int fd );
+
 /* Initialize the vcsm processing.
 **
 ** Must be called once before attempting to do anything else.
@@ -153,7 +162,6 @@ typedef enum
 ** Returns 0 on success, -1 on error.
 */
 int vcsm_init( void );
-
 
 /* Terminates the vcsm processing.
 **
@@ -189,7 +197,7 @@ void vcsm_status( VCSM_STATUS_T status, int pid );
 ** only for the duration it needs to access the memory data associated with
 ** the opaque handle.
 */
-unsigned int vcsm_malloc( unsigned int size, char *name );
+unsigned int vcsm_malloc( unsigned int size, const char *name );
 
 
 /* Allocates a cached block of memory of size 'size' via the vcsm memory
@@ -208,7 +216,7 @@ unsigned int vcsm_malloc( unsigned int size, char *name );
 ** only for the duration it needs to access the memory data associated with
 ** the opaque handle.
 */
-unsigned int vcsm_malloc_cache( unsigned int size, VCSM_CACHE_TYPE_T cache, char *name );
+unsigned int vcsm_malloc_cache( unsigned int size, VCSM_CACHE_TYPE_T cache, const char *name );
 
 
 /* Shares an allocated block of memory via the vcsm memory allocator.
@@ -290,6 +298,15 @@ unsigned int vcsm_vc_hdl_from_ptr( void *usr_ptr );
 **       for safety reason it cannot be used to map anything).
 */
 unsigned int vcsm_vc_hdl_from_hdl( unsigned int handle );
+
+
+/* Retrieves a videocore (bus) address from a opaque handle
+** pointer.
+**
+** Returns:        0 on error
+**                 a non-zero videocore address on success.
+*/
+unsigned int vcsm_vc_addr_from_hdl( unsigned int handle );
 
 
 /* Retrieves a user opaque handle from a mapped user address
@@ -428,16 +445,35 @@ int vcsm_unlock_hdl_sp( unsigned int handle, int cache_no_flush );
 ** 2: clean            given virtual range in L1/L2
 ** 3: clean+invalidate given virtual range in L1/L2
 */
+#define VCSM_MAX_CLEAN_INVALIDATE_ENTRIES 8
 struct vcsm_user_clean_invalid_s {
    struct {
       unsigned int cmd;
       unsigned int handle;
       unsigned int addr;
       unsigned int size;
-   } s[8];
+   } s[VCSM_MAX_CLEAN_INVALIDATE_ENTRIES];
 };
 
 int vcsm_clean_invalid( struct vcsm_user_clean_invalid_s *s );
+
+struct vcsm_user_clean_invalid2_s {
+	unsigned char op_count;
+	unsigned char zero[3];
+	struct vcsm_user_clean_invalid2_block_s {
+		unsigned short invalidate_mode;
+		unsigned short block_count;
+		void *   start_address;
+		unsigned int block_size;
+		unsigned int inter_block_stride;
+	} s[0];
+};
+
+int vcsm_clean_invalid2( struct vcsm_user_clean_invalid2_s *s );
+
+unsigned int vcsm_import_dmabuf( int dmabuf, const char *name );
+
+int vcsm_export_dmabuf( unsigned int vcsm_handle );
 
 #ifdef __cplusplus
 }
